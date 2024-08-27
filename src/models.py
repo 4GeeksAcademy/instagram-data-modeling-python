@@ -1,30 +1,59 @@
 import os
 import sys
-from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy import Column, ForeignKey, Integer, String, Table, Enum
+from sqlalchemy.orm import relationship, declarative_base, backref
 from sqlalchemy import create_engine
 from eralchemy2 import render_er
 
 Base = declarative_base()
 
-class Person(Base):
-    __tablename__ = 'person'
+followers = Table('followers',
+    Base.metadata,
+    Column('user_from_id', Integer, ForeignKey('user.id'), primary_key=True),
+    Column('user_to_id', Integer, ForeignKey('user.id'), primary_key=True)
+)
+
+class Comment(Base):
+    __tablename__ = 'comment'
     # Here we define columns for the table person
     # Notice that each column is also a normal Python instance attribute.
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
+    comment_text = Column(String)
+    author_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    post_id = Column(Integer, ForeignKey('post.id'), nullable=False)
 
-class Address(Base):
-    __tablename__ = 'address'
+class Post(Base):
+    __tablename__ = 'post'
+    # Here we define columns for the table person
+    # Notice that each column is also a normal Python instance attribute.
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    comment = relationship('Comment', backref='post', lazy=True)
+    media = relationship('Media', backref='post', lazy=True)
+
+
+class Media(Base):
+    __tablename__ = 'media'
+    # Here we define columns for the table person
+    # Notice that each column is also a normal Python instance attribute.
+    id = Column(Integer, primary_key=True)
+    typ = Column(Enum("mp3","mp4","jpeg","png"),nullable=False)
+    url = Column(String(250))
+    post_id = Column(Integer, ForeignKey('post.id'), nullable=False)
+
+class User(Base):
+    __tablename__ = 'user'
     # Here we define columns for the table address.
     # Notice that each column is also a normal Python instance attribute.
     id = Column(Integer, primary_key=True)
-    street_name = Column(String(250))
-    street_number = Column(String(250))
-    post_code = Column(String(250), nullable=False)
-    person_id = Column(Integer, ForeignKey('person.id'))
-    person = relationship(Person)
-
+    username = Column(String(250), nullable=False)
+    firstname = Column(String(250), nullable=False)
+    lastname = Column(String(250), nullable=False)
+    comments = relationship('Comment', backref='user', lazy=True)
+    user_post = relationship('Post', backref='user', lazy=True)
+    # relacion de many to many
+    following = relationship('Follower', secondary=followers, lazy='subquery',
+        backref=backref('user', lazy=True))
     def to_dict(self):
         return {}
 
